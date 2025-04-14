@@ -1,8 +1,9 @@
 import axios from 'axios';
 import type { User } from '../types';
 import { list } from '@vercel/blob';
+import { kv } from "@vercel/kv";
 
-const NEYNAR_API_KEY = process.env.NEXT_PUBLIC_NEYNAR_API_KEY || '';
+const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY || process.env.NEXT_PUBLIC_NEYNAR_API_KEY || '';
 const ADMIN_FID = process.env.NEXT_PUBLIC_ADMIN_FID || '262391';
 const BLOB_READ_WRITE_TOKEN = process.env.BLOB_READ_WRITE_TOKEN;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
@@ -125,84 +126,33 @@ export async function fetchUserPoints(username: string): Promise<number> {
 
 export async function fetchLeaderboard(): Promise<User[]> {
   try {
-    // Try to get from blob storage first
+    // First try KV storage (fastest)
+    const kvData = await kv.get<User[]>("leaderboard");
+    if (kvData && kvData.length > 0) {
+      return kvData;
+    }
+
+    // If KV fails, try Blob storage as backup
     try {
       const { blobs } = await list();
-      const leaderboardBlob = blobs.find(b => b.pathname === 'leaderboard.json');
+      const leaderboardBlob = blobs.find((b: { pathname: string }) => b.pathname === 'leaderboard.json');
       if (leaderboardBlob) {
         const response = await fetch(leaderboardBlob.url);
-        const cachedData = await response.json();
-        return cachedData;
-      }
-    } catch (error) {
-      console.log('No cached leaderboard data found, fetching fresh data');
-    }
-
-    // Get all replies by lawn.eth that contain point assignments
-    const replies = await fetchUserReplies(parseInt(ADMIN_FID));
-    
-    // Map to store user points
-    const userPoints = new Map<number, { points: number }>();
-    const fidsToFetch = new Set<number>();
-    
-    // First pass: collect all FIDs and calculate points
-    for (const reply of replies) {
-      if (!reply.parent_author?.fid) continue;
-      
-      if (reply.text.match(/[+-]\d+\s*lawn\s*points?/i)) {
-        const fid = reply.parent_author.fid;
-        const pointMatch = reply.text.match(/([+-]\d+)\s*lawn\s*points?/i);
-        
-        if (pointMatch) {
-          const points = parseInt(pointMatch[1]);
-          const currentPoints = userPoints.get(fid)?.points || 0;
-          userPoints.set(fid, { points: currentPoints + points });
-          fidsToFetch.add(fid);
+        const blobData = await response.json();
+        if (blobData && blobData.length > 0) {
+          // Update KV storage with Blob data for faster future access
+          await kv.set("leaderboard", blobData);
+          return blobData;
         }
       }
+    } catch (blobError) {
+      console.error('Failed to get data from Blob storage:', blobError);
     }
 
-    // Fetch all user details in bulk
-    const fidsArray = Array.from(fidsToFetch);
-    const userDetails = new Map<number, any>();
-    
-    if (fidsArray.length > 0) {
-      try {
-        const userResponse = await api.get('/user/bulk', {
-          params: {
-            fids: fidsArray.join(',')
-          }
-        });
-        
-        for (const user of userResponse.data.users) {
-          userDetails.set(user.fid, user);
-        }
-      } catch (error) {
-        console.error('Error fetching user details in bulk:', error);
-      }
-    }
-    
-    // Convert to array and format for return
-    const leaderboard = Array.from(userPoints.entries())
-      .map(([fid, data]) => {
-        const user = userDetails.get(fid);
-        if (!user) return null;
-        
-        return {
-          fid: user.fid,
-          username: user.username,
-          displayName: user.display_name,
-          pfp: user.pfp_url,
-          points: data.points
-        };
-      })
-      .filter((entry): entry is User => entry !== null);
-    
-    // Sort by points in descending order
-    const sortedLeaderboard = leaderboard.sort((a, b) => b.points - a.points);
-    return sortedLeaderboard;
+    // If no data found in either storage
+    return [];
   } catch (error) {
-    console.error('Error fetching leaderboard:', error);
+    console.error('Error in fetchLeaderboard:', error);
     return [];
   }
 }
