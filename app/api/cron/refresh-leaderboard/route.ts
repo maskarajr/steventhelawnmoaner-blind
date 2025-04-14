@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { fetchLeaderboard } from '../../../lib/neynar';
 import { put } from '@vercel/blob/client';
 import { type NextRequest } from 'next/server';
-import { createHash } from 'crypto';
 
 // Note: We're using Edge runtime
 export const runtime = 'edge';
@@ -47,10 +46,20 @@ async function verifyQStashSignature(req: NextRequest) {
   }
 
   const body = await req.text();
-  const hash = createHash('sha256').update(body).digest('base64');
+  
+  // Convert body to Uint8Array
+  const encoder = new TextEncoder();
+  const data = encoder.encode(body);
+  
+  // Create SHA-256 hash using Web Crypto API
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  
+  // Convert hash to base64
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashBase64 = btoa(String.fromCharCode.apply(null, hashArray));
 
-  const isCurrentValid = signature === `${currentKey}${hash}`;
-  const isNextValid = signature === `${nextKey}${hash}`;
+  const isCurrentValid = signature === `${currentKey}${hashBase64}`;
+  const isNextValid = signature === `${nextKey}${hashBase64}`;
 
   if (!isCurrentValid && !isNextValid) {
     throw new Error('Invalid signature');
