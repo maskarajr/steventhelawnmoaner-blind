@@ -7,7 +7,7 @@ import { Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { LeaderboardEntry } from '../types';
-import UpdateTimer from './UpdateTimer';
+import { UpdateTimer } from './UpdateTimer';
 
 interface LeaderboardProps {
   users: LeaderboardEntry[];
