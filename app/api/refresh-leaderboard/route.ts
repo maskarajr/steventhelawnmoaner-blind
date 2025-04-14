@@ -3,8 +3,6 @@ import { fetchLeaderboard } from '../../lib/neynar';
 import { put } from '@vercel/blob/client';
 
 export const runtime = 'edge';
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
 
 // Helper function to check if it's time to refresh (every 15 minutes)
 function shouldRefresh() {
