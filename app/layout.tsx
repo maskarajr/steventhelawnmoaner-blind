@@ -27,9 +27,9 @@ const bungeeSpice = localFont({
 
 const frameMetadata = {
   version: "next",
-  imageUrl: "https://steventhelawnmoaner.vercel.app/steventhelawn.jpeg",
+  imageUrl: "https://steventhelawnmoaner.vercel.app/original3x2.png",
   button: {
-    title: "Steven is Watching you all",
+    title: "Click & Check your Lawn Points",
     action: {
       type: "launch_frame",
       url: "https://steventhelawnmoaner.vercel.app",
