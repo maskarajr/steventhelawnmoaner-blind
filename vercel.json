@@ -1,10 +1,31 @@
 {
+  "version": 2,
   "framework": "nextjs",
+  "buildCommand": "next build",
+  "devCommand": "next dev",
+  "installCommand": "npm install",
   "blob": {
     "enabled": true
   },
   "crons": [{
     "path": "/api/cron",
     "schedule": "*/15 * * * *"
-  }]
+  }],
+  "functions": {
+    "app/api/**/*": {
+      "memory": 1024,
+      "maxDuration": 10
+    }
+  },
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
+    }
+  ]
 } 
