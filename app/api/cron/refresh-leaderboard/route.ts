@@ -5,7 +5,6 @@ import { Receiver } from '@upstash/qstash';
 
 // Note: We're using Edge runtime
 export const runtime = 'edge';
-export const dynamic = 'force-dynamic';
 
 const receiver = new Receiver({
   currentSigningKey: process.env.QSTASH_CURRENT_SIGNING_KEY!,
@@ -21,9 +20,13 @@ async function handler(req: Request) {
         return NextResponse.json({ error: 'No signature found' }, { status: 401 });
       }
       
+      // Get the raw body
+      const body = await req.text();
+      
+      // Verify the signature
       const isValid = await receiver.verify({
         signature,
-        body: await req.text()
+        body
       });
 
       if (!isValid) {
