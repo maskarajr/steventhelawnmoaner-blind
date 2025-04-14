@@ -1,13 +1,4 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/next"
-    }
-  ],
-  "buildCommand": "npm install && npm run build",
-  "installCommand": "npm install",
   "framework": "nextjs",
   "blob": {
     "enabled": true
