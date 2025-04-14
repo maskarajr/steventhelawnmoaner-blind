@@ -1,19 +1,12 @@
 import axios from 'axios';
 import type { User } from '../types';
-import { list } from '@vercel/blob';
-import { kv } from "@vercel/kv";
 
 const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY || process.env.NEXT_PUBLIC_NEYNAR_API_KEY || '';
 const ADMIN_FID = process.env.NEXT_PUBLIC_ADMIN_FID || '262391';
-const BLOB_READ_WRITE_TOKEN = process.env.BLOB_READ_WRITE_TOKEN;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
 
 if (!NEYNAR_API_KEY) {
   console.error('NEYNAR_API_KEY is not set in environment variables');
-}
-
-if (!BLOB_READ_WRITE_TOKEN) {
-  console.error('BLOB_READ_WRITE_TOKEN is not set in environment variables');
 }
 
 // Cache implementation
@@ -126,31 +119,17 @@ export async function fetchUserPoints(username: string): Promise<number> {
 
 export async function fetchLeaderboard(): Promise<User[]> {
   try {
-    // First try KV storage (fastest)
-    const kvData = await kv.get<User[]>("leaderboard");
-    if (kvData && kvData.length > 0) {
-      return kvData;
-    }
+    const cached = leaderboardCache.get('leaderboard');
+    if (cached) return cached;
 
-    // If KV fails, try Blob storage as backup
-    try {
-      const { blobs } = await list();
-      const leaderboardBlob = blobs.find((b: { pathname: string }) => b.pathname === 'leaderboard.json');
-      if (leaderboardBlob) {
-        const response = await fetch(leaderboardBlob.url);
-        const blobData = await response.json();
-        if (blobData && blobData.length > 0) {
-          // Update KV storage with Blob data for faster future access
-          await kv.set("leaderboard", blobData);
-          return blobData;
-        }
-      }
-    } catch (blobError) {
-      console.error('Failed to get data from Blob storage:', blobError);
+    const response = await fetch('/api/leaderboard');
+    if (!response.ok) {
+      throw new Error('Failed to fetch leaderboard');
     }
-
-    // If no data found in either storage
-    return [];
+    
+    const data = await response.json();
+    leaderboardCache.set('leaderboard', data);
+    return data;
   } catch (error) {
     console.error('Error in fetchLeaderboard:', error);
     return [];
@@ -159,23 +138,13 @@ export async function fetchLeaderboard(): Promise<User[]> {
 
 export async function fetchUserPointsFromBlob(username: string): Promise<number> {
   try {
-    const { blobs } = await list();
-    const leaderboardBlob = blobs.find(b => b.pathname === 'leaderboard.json');
-    
-    if (leaderboardBlob) {
-      const response = await fetch(leaderboardBlob.url);
-      const leaderboardData: User[] = await response.json();
-      
-      // Find user in the blob data
-      const user = leaderboardData.find(
-        u => u.username.toLowerCase() === username.toLowerCase()
-      );
-      
-      return user?.points || 0;
-    }
-    return 0;
+    const leaderboardData = await fetchLeaderboard();
+    const user = leaderboardData.find(
+      u => u.username.toLowerCase() === username.toLowerCase()
+    );
+    return user?.points || 0;
   } catch (error) {
-    console.error('Error fetching points from blob:', error);
+    console.error('Error fetching points:', error);
     return 0;
   }
 }
