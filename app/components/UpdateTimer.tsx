@@ -8,21 +8,18 @@ export default function UpdateTimer() {
   useEffect(() => {
     const calculateTimeLeft = () => {
       const now = new Date();
-      const minutes = now.getMinutes();
       const nextUpdate = new Date(now);
       
-      // Calculate next 15-minute interval
-      const minutesToNext = 15 - (minutes % 15);
-      nextUpdate.setMinutes(minutes + minutesToNext);
-      nextUpdate.setSeconds(0);
-      nextUpdate.setMilliseconds(0);
+      // Set to next midnight UTC
+      nextUpdate.setUTCHours(24, 0, 0, 0);
 
       const diff = nextUpdate.getTime() - now.getTime();
       
-      const minutesLeft = Math.floor(diff / (1000 * 60));
+      const hoursLeft = Math.floor(diff / (1000 * 60 * 60));
+      const minutesLeft = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
       const secondsLeft = Math.floor((diff % (1000 * 60)) / 1000);
 
-      return `${minutesLeft}m ${secondsLeft}s`;
+      return `${hoursLeft}h ${minutesLeft}m ${secondsLeft}s`;
     };
 
     // Update immediately
