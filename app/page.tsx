@@ -135,7 +135,7 @@ export default function Home() {
                 />
               </div>
               <p className="text-lg text-white font-bungee-spice">
-                Steven is watching y'all
+                Steven is watching y&apos;all
               </p>
             </div>
           </div>
