@@ -1,71 +1,52 @@
 import { NextResponse } from 'next/server';
 import { fetchLeaderboard } from '../../../lib/neynar';
 import { put } from '@vercel/blob/client';
-import { Receiver } from '@upstash/qstash';
+import { verifySignature } from '@upstash/qstash/nextjs';
 
 // Note: We're using Edge runtime
 export const runtime = 'edge';
+export const preferredRegion = 'auto';
+export const maxDuration = 300;
 
-const receiver = new Receiver({
-  currentSigningKey: process.env.QSTASH_CURRENT_SIGNING_KEY!,
-  nextSigningKey: process.env.QSTASH_NEXT_SIGNING_KEY!
-});
+async function refreshLeaderboard() {
+  const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
+  if (!blobToken) {
+    throw new Error('BLOB_READ_WRITE_TOKEN is not set');
+  }
 
-async function handler(req: Request) {
+  // Fetch fresh leaderboard data
+  const leaderboard = await fetchLeaderboard();
+  
+  // Store in Vercel Blob
+  const blob = await put('leaderboard.json', JSON.stringify(leaderboard), {
+    access: 'public',
+    token: blobToken
+  });
+  
+  return {
+    success: true,
+    message: 'Leaderboard refreshed successfully via QStash',
+    blobUrl: blob.url,
+    timestamp: new Date().toISOString(),
+    nextRefresh: new Date(Date.now() + 15 * 60 * 1000)
+  };
+}
+
+async function handler() {
   try {
-    // For POST requests, verify the signature
-    if (req.method === 'POST') {
-      const signature = req.headers.get('upstash-signature');
-      if (!signature) {
-        return NextResponse.json({ error: 'No signature found' }, { status: 401 });
-      }
-      
-      // Get the raw body
-      const body = await req.text();
-      
-      // Verify the signature
-      const isValid = await receiver.verify({
-        signature,
-        body
-      });
-
-      if (!isValid) {
-        return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
-      }
-    }
-
-    const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
-    if (!blobToken) {
-      throw new Error('BLOB_READ_WRITE_TOKEN is not set');
-    }
-
-    // Fetch fresh leaderboard data
-    const leaderboard = await fetchLeaderboard();
-    
-    // Store in Vercel Blob
-    const blob = await put('leaderboard.json', JSON.stringify(leaderboard), {
-      access: 'public',
-      token: blobToken
-    });
-    
-    return NextResponse.json({
-      success: true,
-      message: 'Leaderboard refreshed successfully via QStash',
-      blobUrl: blob.url,
-      timestamp: new Date().toISOString(),
-      nextRefresh: new Date(Date.now() + 15 * 60 * 1000)
-    });
+    const result = await refreshLeaderboard();
+    return NextResponse.json(result);
   } catch (error) {
-    console.error('Error refreshing leaderboard:', error);
+    console.error('Error in handler:', error);
     return NextResponse.json(
-      { error: 'Failed to refresh leaderboard' },
+      { error: 'Failed to process request' },
       { status: 500 }
     );
   }
 }
 
-// Export the POST method with signature verification
-export const POST = handler;
+// Export POST with QStash verification
+export const POST = verifySignature(handler);
 
-// Export the GET method for testing
+// Export GET for testing
 export const GET = handler; 
