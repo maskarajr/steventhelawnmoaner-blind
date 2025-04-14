@@ -44,7 +44,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Lawn Points Leaderboard',
     description: 'Check your Lawn Points balance and see who\'s leading the pack!',
-    images: ['/steventhelawn.jpeg'],
+    images: ['/original3x2.png'],
   },
   other: {
     'fc:frame': JSON.stringify(frameMetadata),
