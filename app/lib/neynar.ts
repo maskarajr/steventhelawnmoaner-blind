@@ -117,17 +117,35 @@ export async function fetchUserPoints(username: string): Promise<number> {
   }
 }
 
+let lastUpdateTime: string | null = null;
+
 export async function fetchLeaderboard(): Promise<User[]> {
   try {
     const cached = leaderboardCache.get('leaderboard');
     if (cached) return cached;
 
-    const response = await fetch('/api/leaderboard');
+    const host = process.env.NEXT_PUBLIC_HOST || '';
+    const url = new URL(`${host}/api/leaderboard`);
+    if (lastUpdateTime) {
+      url.searchParams.set('lastUpdate', lastUpdateTime);
+    }
+
+    const response = await fetch(url);
+    
+    // If 304 Not Modified, return cached data
+    if (response.status === 304 && cached) {
+      return cached;
+    }
+
     if (!response.ok) {
       throw new Error('Failed to fetch leaderboard');
     }
     
-    const data = await response.json();
+    const { data, lastUpdate } = await response.json();
+    if (lastUpdate) {
+      lastUpdateTime = lastUpdate;
+    }
+    
     leaderboardCache.set('leaderboard', data);
     return data;
   } catch (error) {
