@@ -4,13 +4,12 @@
   "buildCommand": "next build",
   "devCommand": "next dev",
   "installCommand": "npm install",
-  "blob": {
-    "enabled": true
-  },
-  "crons": [{
-    "path": "/api/cron",
-    "schedule": "*/15 * * * *"
-  }],
+  "crons": [
+    {
+      "path": "/api/cron",
+      "schedule": "0 0 * * *"
+    }
+  ],
   "functions": {
     "app/api/**/*": {
       "memory": 1024,
