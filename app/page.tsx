@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import UserSearch from './components/UserSearch';
 import Leaderboard from './components/Leaderboard';
 import { Card } from "@/components/ui/card";
-import { fetchLeaderboard, fetchUserPoints } from './lib/neynar';
+import { fetchLeaderboard, fetchUserPointsFromBlob } from './lib/neynar';
 import type { User, LeaderboardEntry } from './types';
 import { toast } from "sonner";
 import Image from 'next/image';
@@ -16,6 +16,7 @@ export default function Home() {
   const [searchResult, setSearchResult] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [fadeOut, setFadeOut] = useState(false);
 
   useEffect(() => {
     const initialize = async () => {
@@ -32,6 +33,31 @@ export default function Home() {
 
     initialize();
   }, []);
+
+  // Clear search result after timeout
+  useEffect(() => {
+    let fadeTimer: NodeJS.Timeout;
+    let clearTimer: NodeJS.Timeout;
+
+    if (searchResult) {
+      // Start fade out after 27 seconds (giving 3 seconds for the fade animation)
+      fadeTimer = setTimeout(() => {
+        setFadeOut(true);
+      }, 27000);
+
+      // Clear the search result after 30 seconds
+      clearTimer = setTimeout(() => {
+        setSearchResult(null);
+        setFadeOut(false);
+      }, 30000);
+    }
+
+    // Cleanup timers
+    return () => {
+      clearTimeout(fadeTimer);
+      clearTimeout(clearTimer);
+    };
+  }, [searchResult]);
 
   async function loadLeaderboard() {
     try {
@@ -53,10 +79,29 @@ export default function Home() {
     }
   }
 
-  async function handleSearch(username: string) {
+  const handleSearch = async (username: string) => {
+    setFadeOut(false);
     try {
       setError(null);
-      const points = await fetchUserPoints(username);
+      
+      // First check if user exists in current leaderboard state
+      const leaderboardUser = leaderboard.find(
+        user => user.username.toLowerCase() === username.toLowerCase()
+      );
+
+      if (leaderboardUser) {
+        setSearchResult({
+          username: leaderboardUser.username,
+          points: leaderboardUser.points,
+          fid: leaderboardUser.fid,
+          displayName: leaderboardUser.displayName,
+          pfp: leaderboardUser.pfp
+        });
+        return;
+      }
+
+      // If not in current state, check blob storage
+      const points = await fetchUserPointsFromBlob(username);
       setSearchResult({
         username,
         points,
@@ -69,7 +114,7 @@ export default function Home() {
       setError(message);
       toast.error(message);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-[#00011f]">
@@ -106,7 +151,7 @@ export default function Home() {
           )}
 
           {searchResult && !error && (
-            <Card className="p-6 bg-[#0021f5] text-white">
+            <Card className={`p-6 bg-[#0021f5] text-white transition-opacity duration-1000 ${fadeOut ? 'opacity-0' : 'opacity-100'}`}>
               <h3 className="text-xl font-semibold mb-2">Search Result</h3>
               <div className="flex items-center justify-between">
                 <div>

@@ -8,5 +8,12 @@
   ],
   "buildCommand": "npm install && npm run build",
   "installCommand": "npm install",
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "blob": {
+    "enabled": true
+  },
+  "crons": [{
+    "path": "/api/cron",
+    "schedule": "*/15 * * * *"
+  }]
 } 

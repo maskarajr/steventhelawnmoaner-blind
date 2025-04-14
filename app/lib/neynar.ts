@@ -1,12 +1,18 @@
 import axios from 'axios';
 import type { User } from '../types';
+import { list } from '@vercel/blob';
 
 const NEYNAR_API_KEY = process.env.NEXT_PUBLIC_NEYNAR_API_KEY || '';
 const ADMIN_FID = process.env.NEXT_PUBLIC_ADMIN_FID || '262391';
+const BLOB_READ_WRITE_TOKEN = process.env.BLOB_READ_WRITE_TOKEN;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
 
 if (!NEYNAR_API_KEY) {
   console.error('NEYNAR_API_KEY is not set in environment variables');
+}
+
+if (!BLOB_READ_WRITE_TOKEN) {
+  console.error('BLOB_READ_WRITE_TOKEN is not set in environment variables');
 }
 
 // Cache implementation
@@ -51,7 +57,7 @@ const api = axios.create({
   }
 });
 
-async function fetchUserReplies(fid: number): Promise<any[]> {
+export async function fetchUserReplies(fid: number): Promise<any[]> {
   const cacheKey = `replies-${fid}`;
   const cached = repliesCache.get(cacheKey);
   if (cached) return cached;
@@ -60,7 +66,7 @@ async function fetchUserReplies(fid: number): Promise<any[]> {
     const response = await api.get('/feed/user/casts', {
       params: {
         fid: fid,
-        limit: 50,
+        limit: 150,
         include_replies: true
       }
     });
@@ -118,20 +124,29 @@ export async function fetchUserPoints(username: string): Promise<number> {
 }
 
 export async function fetchLeaderboard(): Promise<User[]> {
-  const cacheKey = 'leaderboard';
-  const cached = leaderboardCache.get(cacheKey);
-  if (cached) return cached;
-
   try {
+    // Try to get from blob storage first
+    try {
+      const { blobs } = await list();
+      const leaderboardBlob = blobs.find(b => b.pathname === 'leaderboard.json');
+      if (leaderboardBlob) {
+        const response = await fetch(leaderboardBlob.url);
+        const cachedData = await response.json();
+        return cachedData;
+      }
+    } catch (error) {
+      console.log('No cached leaderboard data found, fetching fresh data');
+    }
+
     // Get all replies by lawn.eth that contain point assignments
     const replies = await fetchUserReplies(parseInt(ADMIN_FID));
     
     // Map to store user points
-    const userPoints = new Map<number, { points: number, user: any }>();
+    const userPoints = new Map<number, { points: number }>();
+    const fidsToFetch = new Set<number>();
     
-    // Process each reply for point assignments
+    // First pass: collect all FIDs and calculate points
     for (const reply of replies) {
-      // Skip if parent_author is missing or has no FID
       if (!reply.parent_author?.fid) continue;
       
       if (reply.text.match(/[+-]\d+\s*lawn\s*points?/i)) {
@@ -141,54 +156,76 @@ export async function fetchLeaderboard(): Promise<User[]> {
         if (pointMatch) {
           const points = parseInt(pointMatch[1]);
           const currentPoints = userPoints.get(fid)?.points || 0;
-          
-          try {
-            // Get user details if we haven't stored them yet
-            if (!userPoints.has(fid)) {
-              const userResponse = await api.get('/user/bulk', {
-                params: {
-                  fids: fid
-                }
-              });
-              
-              const userData = userResponse.data.users[0];
-              if (userData) {
-                userPoints.set(fid, {
-                  points: currentPoints + points,
-                  user: userData
-                });
-              }
-            } else {
-              userPoints.set(fid, {
-                points: currentPoints + points,
-                user: userPoints.get(fid)!.user
-              });
-            }
-          } catch (error) {
-            console.error(`Error fetching user details for FID ${fid}:`, error);
-            continue;
-          }
+          userPoints.set(fid, { points: currentPoints + points });
+          fidsToFetch.add(fid);
         }
+      }
+    }
+
+    // Fetch all user details in bulk
+    const fidsArray = Array.from(fidsToFetch);
+    const userDetails = new Map<number, any>();
+    
+    if (fidsArray.length > 0) {
+      try {
+        const userResponse = await api.get('/user/bulk', {
+          params: {
+            fids: fidsArray.join(',')
+          }
+        });
+        
+        for (const user of userResponse.data.users) {
+          userDetails.set(user.fid, user);
+        }
+      } catch (error) {
+        console.error('Error fetching user details in bulk:', error);
       }
     }
     
     // Convert to array and format for return
     const leaderboard = Array.from(userPoints.entries())
-      .filter(([_, data]) => data.user) // Filter out any entries with missing user data
-      .map(([_, data]) => ({
-        fid: data.user.fid,
-        username: data.user.username,
-        displayName: data.user.display_name,
-        pfp: data.user.pfp_url,
-        points: data.points
-      }));
+      .map(([fid, data]) => {
+        const user = userDetails.get(fid);
+        if (!user) return null;
+        
+        return {
+          fid: user.fid,
+          username: user.username,
+          displayName: user.display_name,
+          pfp: user.pfp_url,
+          points: data.points
+        };
+      })
+      .filter((entry): entry is User => entry !== null);
     
     // Sort by points in descending order
     const sortedLeaderboard = leaderboard.sort((a, b) => b.points - a.points);
-    leaderboardCache.set(cacheKey, sortedLeaderboard);
     return sortedLeaderboard;
   } catch (error) {
     console.error('Error fetching leaderboard:', error);
     return [];
+  }
+}
+
+export async function fetchUserPointsFromBlob(username: string): Promise<number> {
+  try {
+    const { blobs } = await list();
+    const leaderboardBlob = blobs.find(b => b.pathname === 'leaderboard.json');
+    
+    if (leaderboardBlob) {
+      const response = await fetch(leaderboardBlob.url);
+      const leaderboardData: User[] = await response.json();
+      
+      // Find user in the blob data
+      const user = leaderboardData.find(
+        u => u.username.toLowerCase() === username.toLowerCase()
+      );
+      
+      return user?.points || 0;
+    }
+    return 0;
+  } catch (error) {
+    console.error('Error fetching points from blob:', error);
+    return 0;
   }
 }
