@@ -1,13 +1,8 @@
 import axios from 'axios';
 import type { User } from '../types';
 
-const NEYNAR_API_KEY = process.env.NEXT_PUBLIC_NEYNAR_CLIENT_KEY || '';
 const ADMIN_FID = process.env.NEXT_PUBLIC_ADMIN_FID || '262391';
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
-
-if (!NEYNAR_API_KEY) {
-  console.error('NEXT_PUBLIC_NEYNAR_CLIENT_KEY is not set in environment variables');
-}
 
 // Cache implementation
 interface CacheEntry<T> {
@@ -42,14 +37,25 @@ const repliesCache = new Cache<any[]>();
 const userCache = new Cache<any>();
 const leaderboardCache = new Cache<User[]>();
 
-// API client
-const api = axios.create({
-  baseURL: 'https://api.neynar.com/v2/farcaster',
-  headers: {
-    'accept': 'application/json',
-    'x-api-key': NEYNAR_API_KEY
+async function callNeynarApi(endpoint: string, params: any) {
+  const baseUrl = process.env.NODE_ENV === 'development' 
+    ? 'http://localhost:3000' 
+    : (process.env.NEXT_PUBLIC_HOST || (typeof window !== 'undefined' ? window.location.origin : ''));
+  
+  const response = await fetch(`${baseUrl}/api/neynar-proxy`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ endpoint, params })
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch from Neynar');
   }
-});
+
+  return response.json();
+}
 
 export async function fetchUserReplies(fid: number): Promise<any[]> {
   const cacheKey = `replies-${fid}`;
@@ -57,14 +63,12 @@ export async function fetchUserReplies(fid: number): Promise<any[]> {
   if (cached) return cached;
 
   try {
-    const response = await api.get('/feed/user/casts', {
-      params: {
-        fid: fid,
-        limit: 150,
-        include_replies: true
-      }
+    const data = await callNeynarApi('/feed/user/casts', {
+      fid,
+      limit: 150,
+      include_replies: true
     });
-    const replies = response.data.casts || [];
+    const replies = data.casts || [];
     repliesCache.set(cacheKey, replies);
     return replies;
   } catch (error) {
@@ -80,12 +84,10 @@ export async function fetchUserPoints(username: string): Promise<number> {
 
   try {
     // First get the user's FID
-    const userResponse = await api.get('/user/by_username', {
-      params: {
-        username: username
-      }
+    const userData = await callNeynarApi('/user/by_username', {
+      username: username
     });
-    const user = userResponse.data.result.user;
+    const user = userData.result.user;
     
     if (!user || !user.fid) {
       return 0;
