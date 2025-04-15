@@ -27,6 +27,9 @@ const bungeeSpice = localFont({
 
 const frameMetadata = {
   version: "next",
+  name: "Steven the Lawn Moaner",
+  iconUrl: "https://steventhelawnmoaner.vercel.app/icon.png",
+  homeUrl: "https://steventhelawnmoaner.vercel.app",
   imageUrl: "https://steventhelawnmoaner.vercel.app/original3x2.png",
   button: {
     title: "Click & Check your Lawn Points",
@@ -35,7 +38,9 @@ const frameMetadata = {
       url: "https://steventhelawnmoaner.vercel.app",
       name: "Steven the Lawn Moaner"
     }
-  }
+  },
+  splashImageUrl: "https://steventhelawnmoaner.vercel.app/icon.png",
+  splashBackgroundColor: "#00011f"
 };
 
 export const metadata: Metadata = {
@@ -44,7 +49,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Lawn Points Leaderboard',
     description: 'Check your Lawn Points balance and see who\'s leading the pack!',
-    images: ['/original3x2.png'],
+    images: ['https://steventhelawnmoaner.vercel.app/original3x2.png'],
   },
   other: {
     'fc:frame': JSON.stringify(frameMetadata),
