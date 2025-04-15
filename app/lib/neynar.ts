@@ -124,11 +124,15 @@ export async function fetchLeaderboard(): Promise<User[]> {
     const cached = leaderboardCache.get('leaderboard');
     if (cached) return cached;
 
-    // Use relative URL in development, fallback to NEXT_PUBLIC_HOST in production
+    // Use relative URL in development, fallback to window.location.origin in production
     const baseUrl = process.env.NODE_ENV === 'development' 
       ? 'http://localhost:3000' 
-      : process.env.NEXT_PUBLIC_HOST || '';
+      : (process.env.NEXT_PUBLIC_HOST || (typeof window !== 'undefined' ? window.location.origin : ''));
     
+    if (!baseUrl) {
+      throw new Error('Unable to determine base URL');
+    }
+
     const url = new URL('/api/leaderboard', baseUrl);
     if (lastUpdateTime) {
       url.searchParams.set('lastUpdate', lastUpdateTime);

@@ -7,6 +7,7 @@
 
 # testing
 /coverage
+/app/api/redis-test/
 
 # next.js
 /.next/

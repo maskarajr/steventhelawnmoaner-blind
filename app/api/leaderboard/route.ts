@@ -18,13 +18,26 @@ export async function GET(request: Request) {
 
     // If the client's last update matches server's, return 304 Not Modified
     if (lastUpdateHeader && lastUpdate && lastUpdateHeader === lastUpdate) {
-      return new Response(null, { status: 304 });
+      return new Response(null, { 
+        status: 304,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        }
+      });
     }
 
     if (kvData && kvData.length > 0) {
       return NextResponse.json({
         data: kvData,
         lastUpdate
+      }, {
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        }
       });
     }
 
@@ -41,6 +54,12 @@ export async function GET(request: Request) {
           return NextResponse.json({
             data: blobData,
             lastUpdate
+          }, {
+            headers: {
+              'Access-Control-Allow-Origin': '*',
+              'Access-Control-Allow-Methods': 'GET, OPTIONS',
+              'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            }
           });
         }
       }
@@ -52,9 +71,22 @@ export async function GET(request: Request) {
     return NextResponse.json({
       data: [],
       lastUpdate: null
+    }, {
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      }
     });
   } catch (error) {
     console.error('Error fetching leaderboard:', error);
-    return NextResponse.json({ error: 'Failed to fetch leaderboard' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to fetch leaderboard' }, { 
+      status: 500,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      }
+    });
   }
 } 
