@@ -97,65 +97,80 @@ async function refreshLeaderboard(shouldReset = false) {
     for (const cast of casts) {
       if (!cast.parent_author?.fid) continue;
       
-      const pointMatch = cast.text.match(/([+-]\d+)\s*lawn\s*points?/i);
+      const pointMatch = cast.text.match(/([+-]\d+(?:\.\d{1,8})?)\s*lawn\s*points?/i);
       if (pointMatch) {
         const fid = cast.parent_author.fid;
-        const points = parseInt(pointMatch[1]);
+        const points = parseFloat(pointMatch[1]);
         
         // Get or initialize user in points map
-        const user = pointsMap.get(fid);
-        if (user) {
-          user.points += points;
-          pointsProcessed.push({
+        let user = pointsMap.get(fid);
+        if (!user) {
+          user = {
             fid,
-            username: user.username,
-            points,
-            newTotal: user.points,
-            timestamp: cast.timestamp
-          });
-        } else {
+            username: '',
+            displayName: '',
+            pfp: '',
+            points: 0
+          };
+          pointsMap.set(fid, user);
           usersToFetch.add(fid);
-          pointsProcessed.push({
-            fid,
-            points,
-            status: 'new_user',
-            timestamp: cast.timestamp
-          });
         }
+        
+        // Accumulate points
+        user.points += points;
+        
+        pointsProcessed.push({
+          fid,
+          username: user.username || '',
+          points,
+          newTotal: user.points,
+          timestamp: cast.timestamp
+        });
       }
     }
 
     // Add admin to fetch list if not in pointsMap
     if (!pointsMap.has(parseInt(ADMIN_FID))) {
-      usersToFetch.add(parseInt(ADMIN_FID));
+      const adminFid = parseInt(ADMIN_FID);
+      pointsMap.set(adminFid, {
+        fid: adminFid,
+        username: '',
+        displayName: '',
+        pfp: '',
+        points: 0
+      });
+      usersToFetch.add(adminFid);
     }
 
-    // Fetch user details for new users
+    // Fetch user details for all users in the points map
     if (usersToFetch.size > 0) {
-      console.log('Fetching details for new users:', usersToFetch.size);
+      console.log('Fetching details for users:', usersToFetch.size);
       const userResponse = await api.get('/user/bulk', {
         params: {
           fids: Array.from(usersToFetch).join(',')
         }
       });
 
-      // Add new users to points map
+      // Update users in points map with their details
       for (const user of userResponse.data.users) {
-        if (!pointsMap.has(user.fid)) {
-          // Calculate total points for this new user from processed points
-          const userPoints = pointsProcessed
-            .filter(p => p.fid === user.fid)
-            .reduce((total, p) => total + p.points, 0);
-
+        const existingUser = pointsMap.get(user.fid);
+        if (existingUser) {
           pointsMap.set(user.fid, {
-            fid: user.fid,
+            ...existingUser,
             username: user.username,
             displayName: user.display_name,
-            pfp: user.pfp_url,
-            points: userPoints || 0 // Initialize with 0 if no points found
+            pfp: user.pfp_url
           });
         }
       }
+
+      // Update pointsProcessed with user details
+      pointsProcessed.forEach(processed => {
+        const user = pointsMap.get(processed.fid);
+        if (user) {
+          processed.username = user.username;
+        }
+      });
     }
 
     // Convert to array and sort by points

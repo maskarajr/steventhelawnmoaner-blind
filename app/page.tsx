@@ -130,6 +130,7 @@ export default function Home() {
                   src={stevenTheLawn}
                   alt="Steven the Lawn"
                   fill
+                  sizes="30px"
                   className="rounded-full object-cover"
                   priority
                 />

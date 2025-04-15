@@ -124,8 +124,12 @@ export async function fetchLeaderboard(): Promise<User[]> {
     const cached = leaderboardCache.get('leaderboard');
     if (cached) return cached;
 
-    const host = process.env.NEXT_PUBLIC_HOST || '';
-    const url = new URL(`${host}/api/leaderboard`);
+    // Use relative URL in development, fallback to NEXT_PUBLIC_HOST in production
+    const baseUrl = process.env.NODE_ENV === 'development' 
+      ? 'http://localhost:3000' 
+      : process.env.NEXT_PUBLIC_HOST || '';
+    
+    const url = new URL('/api/leaderboard', baseUrl);
     if (lastUpdateTime) {
       url.searchParams.set('lastUpdate', lastUpdateTime);
     }
