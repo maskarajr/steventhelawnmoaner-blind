@@ -1,12 +1,12 @@
 import axios from 'axios';
 import type { User } from '../types';
 
-const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY || process.env.NEXT_PUBLIC_NEYNAR_API_KEY || '';
+const NEYNAR_API_KEY = process.env.NEXT_PUBLIC_NEYNAR_CLIENT_KEY || '';
 const ADMIN_FID = process.env.NEXT_PUBLIC_ADMIN_FID || '262391';
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
 
 if (!NEYNAR_API_KEY) {
-  console.error('NEYNAR_API_KEY is not set in environment variables');
+  console.error('NEXT_PUBLIC_NEYNAR_CLIENT_KEY is not set in environment variables');
 }
 
 // Cache implementation
