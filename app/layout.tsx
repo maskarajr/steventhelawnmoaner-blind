@@ -25,21 +25,6 @@ const bungeeSpice = localFont({
   display: 'swap',
 });
 
-const frameMetadata = {
-  version: "next",
-  imageUrl: "https://steventhelawnmoaner.vercel.app/original3x2.png",
-  button: {
-    title: "Click & Check your Lawn Points",
-    action: {
-      type: "launch_frame",
-      url: "https://steventhelawnmoaner.vercel.app",
-      name: "Steven the Lawn Moaner",
-      splashImageUrl: "https://steventhelawnmoaner.vercel.app/icon.png",
-      splashBackgroundColor: "#00011f"
-    }
-  }
-};
-
 export const metadata: Metadata = {
   title: 'Lawn Points Leaderboard',
   description: 'Check your Lawn Points balance and see who\'s leading the pack!',
@@ -47,10 +32,7 @@ export const metadata: Metadata = {
     title: 'Lawn Points Leaderboard',
     description: 'Check your Lawn Points balance and see who\'s leading the pack!',
     images: ['https://steventhelawnmoaner.vercel.app/original3x2.png'],
-  },
-  other: {
-    'fc:frame': JSON.stringify(frameMetadata),
-  },
+  }
 };
 
 export default function RootLayout({
@@ -63,7 +45,7 @@ export default function RootLayout({
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
         <link rel="icon" href="/favicon.ico" />
-        <meta name="fc:frame" content={JSON.stringify(frameMetadata)} />
+        <meta name="fc:frame" content='{"version":"next","imageUrl":"https://steventhelawnmoaner.vercel.app/original3x2.png","button":{"title":"Click & Check your Lawn Points","action":{"type":"launch_frame","url":"https://steventhelawnmoaner.vercel.app","name":"Steven the Lawn Moaner","splashImageUrl":"https://steventhelawnmoaner.vercel.app/icon.png","splashBackgroundColor":"#00011f"}}}' />
         <meta property="og:image" content="https://steventhelawnmoaner.vercel.app/original3x2.png" />
         <meta property="og:title" content="Steven the Lawn Moaner" />
         <meta property="og:description" content="Check your Lawn Points balance and see who's leading the pack!" />
