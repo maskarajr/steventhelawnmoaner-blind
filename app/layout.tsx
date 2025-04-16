@@ -66,6 +66,12 @@ export default function RootLayout({
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
         <link rel="icon" href="/favicon.ico" />
+        <meta property="fc:frame" content={JSON.stringify(frameMetadata)} />
+        <meta property="fc:frame:image" content="https://steventhelawnmoaner.vercel.app/original3x2.png" />
+        <meta property="fc:frame:button:1" content="Click & Check your Lawn Points" />
+        <meta property="fc:frame:button:1:action" content="post" />
+        <meta property="fc:frame:splash_screen:image" content="https://steventhelawnmoaner.vercel.app/icon.png" />
+        <meta property="fc:frame:splash_screen:background_color" content="#00011f" />
       </head>
       <body>{children}</body>
     </html>
