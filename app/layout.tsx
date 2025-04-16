@@ -64,6 +64,9 @@ export default function RootLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
         <link rel="icon" href="/favicon.ico" />
         <meta name="fc:frame" content={JSON.stringify(frameMetadata)} />
+        <meta property="og:image" content="https://steventhelawnmoaner.vercel.app/original3x2.png" />
+        <meta property="og:title" content="Steven the Lawn Moaner" />
+        <meta property="og:description" content="Check your Lawn Points balance and see who's leading the pack!" />
       </head>
       <body>{children}</body>
     </html>
