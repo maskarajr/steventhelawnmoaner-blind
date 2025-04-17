@@ -7,8 +7,8 @@ import type { User } from '@/app/types';
 // Config for Edge Runtime
 export const runtime = "edge";
 
-// 15 minutes in milliseconds
-const REFRESH_INTERVAL = 15 * 60 * 1000;
+// 1 hour in milliseconds
+const REFRESH_INTERVAL = 60 * 60 * 1000;
 
 const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY;
 const ADMIN_FID = process.env.NEXT_PUBLIC_ADMIN_FID || '262391';
