@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { REFRESH_INTERVAL } from '@/app/lib/constants';
 
 export function UpdateTimer() {
   const [timeLeft, setTimeLeft] = useState('');
@@ -8,15 +9,9 @@ export function UpdateTimer() {
   useEffect(() => {
     const calculateTimeLeft = () => {
       const now = new Date();
-      const minutes = now.getMinutes();
-      const nextUpdate = new Date(now);
+      const lastUpdate = new Date(now.getTime() - (now.getTime() % REFRESH_INTERVAL));
+      const nextUpdate = new Date(lastUpdate.getTime() + REFRESH_INTERVAL);
       
-      // Calculate next 15-minute interval
-      const minutesToNext = 15 - (minutes % 15);
-      nextUpdate.setMinutes(now.getMinutes() + minutesToNext);
-      nextUpdate.setSeconds(0);
-      nextUpdate.setMilliseconds(0);
-
       const diff = nextUpdate.getTime() - now.getTime();
       const minutesLeft = Math.floor((diff / 1000 / 60) % 60);
       const secondsLeft = Math.floor((diff / 1000) % 60);

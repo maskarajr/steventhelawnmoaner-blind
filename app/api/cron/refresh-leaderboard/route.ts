@@ -3,12 +3,11 @@ import { kv } from "@vercel/kv";
 import { put, list, del } from '@vercel/blob';
 import axios, { AxiosResponse } from 'axios';
 import type { User } from '@/app/types';
+import { fetchLeaderboard } from '@/app/lib/neynar';
+import { REFRESH_INTERVAL } from '@/app/lib/constants';
 
 // Config for Edge Runtime
 export const runtime = "edge";
-
-// 1 hour in milliseconds
-const REFRESH_INTERVAL = 60 * 60 * 1000;
 
 const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY;
 const ADMIN_FID = process.env.NEXT_PUBLIC_ADMIN_FID || '262391';
@@ -210,21 +209,23 @@ async function refreshLeaderboard(shouldReset = false) {
   }
 }
 
-export async function GET(request: NextRequest) {
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+export async function GET() {
   try {
-    if (!isAuthorized(request)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const reset = request.nextUrl.searchParams.get('reset') === 'true';
-    const result = await refreshLeaderboard(reset);
-    return NextResponse.json(result);
+    const leaderboard = await fetchLeaderboard();
+    return NextResponse.json(leaderboard);
   } catch (error) {
-    return NextResponse.json(
-      { error: 'Failed to refresh leaderboard', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    );
+    console.error('Error refreshing leaderboard:', error);
+    return NextResponse.json({ error: 'Failed to refresh leaderboard' }, { status: 500 });
   }
 }
+
+// Schedule the cron job to run every hour
+export const config = {
+  schedule: `*/${REFRESH_INTERVAL / (60 * 1000)} * * * *`,
+};
 
 export async function POST(request: NextRequest) {
   try {
