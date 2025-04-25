@@ -123,9 +123,6 @@ let lastUpdateTime: string | null = null;
 
 export async function fetchLeaderboard(): Promise<User[]> {
   try {
-    const cached = leaderboardCache.get('leaderboard');
-    if (cached) return cached;
-
     // Use relative URL in development, fallback to window.location.origin in production
     const baseUrl = process.env.NODE_ENV === 'development' 
       ? 'http://localhost:3000' 
@@ -143,8 +140,9 @@ export async function fetchLeaderboard(): Promise<User[]> {
     const response = await fetch(url);
     
     // If 304 Not Modified, return cached data
-    if (response.status === 304 && cached) {
-      return cached;
+    if (response.status === 304) {
+      const cached = leaderboardCache.get('leaderboard');
+      if (cached) return cached;
     }
 
     if (!response.ok) {
@@ -154,9 +152,9 @@ export async function fetchLeaderboard(): Promise<User[]> {
     const { data, lastUpdate } = await response.json();
     if (lastUpdate) {
       lastUpdateTime = lastUpdate;
+      leaderboardCache.set('leaderboard', data);
     }
     
-    leaderboardCache.set('leaderboard', data);
     return data;
   } catch (error) {
     console.error('Error in fetchLeaderboard:', error);

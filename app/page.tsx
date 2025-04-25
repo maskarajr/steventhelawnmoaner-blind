@@ -161,7 +161,7 @@ export default function Home() {
                 </div>
                 <div className="text-right">
                   <p className="text-2xl font-bold">
-                    {searchResult.points}
+                    {Number(Number(searchResult.points).toFixed(4)).toString()}
                   </p>
                   <p className="text-sm opacity-80">Lawn Points</p>
                 </div>

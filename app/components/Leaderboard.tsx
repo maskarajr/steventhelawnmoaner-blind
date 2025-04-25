@@ -65,7 +65,9 @@ export default function Leaderboard({ users }: LeaderboardProps) {
             </div>
             
             <div className="text-right flex flex-col items-end">
-              <p className="text-base sm:text-lg font-bold">{user.points}</p>
+              <p className="text-base sm:text-lg font-bold">
+                {Number(Number(user.points).toFixed(4)).toString()}
+              </p>
               <p className="text-[10px] sm:text-xs opacity-80">Lawn Points</p>
             </div>
           </Card>

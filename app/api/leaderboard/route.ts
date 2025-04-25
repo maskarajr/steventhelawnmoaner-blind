@@ -49,11 +49,18 @@ export async function GET(request: Request) {
         const response = await fetch(leaderboardBlob.url);
         const blobData = await response.json();
         if (blobData && blobData.length > 0) {
-          // Update KV storage with Blob data for faster future access
-          await kv.set("leaderboard", blobData);
+          // Get the last modified time from the blob
+          const blobLastUpdate = new Date(leaderboardBlob.uploadedAt).toISOString();
+          
+          // Update KV storage with Blob data and timestamp
+          await Promise.all([
+            kv.set("leaderboard", blobData),
+            kv.set("lastUpdate", blobLastUpdate)
+          ]);
+          
           return NextResponse.json({
             data: blobData,
-            lastUpdate
+            lastUpdate: blobLastUpdate
           }, {
             headers: {
               'Access-Control-Allow-Origin': '*',
