@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { kv } from "@vercel/kv";
-import { put, list, del } from '@vercel/blob';
-import axios, { AxiosResponse } from 'axios';
+import { put } from '@vercel/blob';
+import axios from 'axios';
 import type { User } from '@/app/types';
 import { fetchLeaderboard } from '@/app/lib/neynar';
 import { REFRESH_INTERVAL } from '@/app/lib/constants';
@@ -45,30 +45,7 @@ function isAuthorized(request: NextRequest) {
   return secretParam === REFRESH_SECRET;
 }
 
-// Function to reset storage
-async function resetStorage() {
-  try {
-    // Clear KV storage
-    await kv.del("leaderboard");
-    await kv.del("lastUpdate");
-
-    // Clear Blob storage
-    const { blobs } = await list();
-    const leaderboardBlob = blobs.find(b => b.pathname === 'leaderboard.json');
-    if (leaderboardBlob) {
-      await del('leaderboard.json', {
-        token: process.env.BLOB_READ_WRITE_TOKEN!
-      });
-    }
-
-    return true;
-  } catch (error) {
-    console.error('Error resetting storage:', error);
-    return false;
-  }
-}
-
-// Add these validation functions at the top
+// Validation functions
 function isValidUser(user: any): boolean {
   return (
     user &&
@@ -85,16 +62,22 @@ function isValidPoints(points: number): boolean {
   return typeof points === 'number' && !isNaN(points) && isFinite(points);
 }
 
-async function refreshLeaderboard(shouldReset = false) {
+async function refreshLeaderboard() {
   try {
-    // Reset storage if requested
-    if (shouldReset) {
-      console.log('Resetting storage...');
-      await resetStorage();
-    }
-
     // Get existing leaderboard data
-    const existingLeaderboard = await fetchLeaderboard();
+    let existingLeaderboard: User[] = [];
+    try {
+      existingLeaderboard = await fetchLeaderboard();
+    } catch (error) {
+      console.error('Error fetching existing leaderboard:', error);
+      // If we can't fetch the existing leaderboard, try to get it from KV storage
+      const kvLeaderboard = await kv.get("leaderboard");
+      if (Array.isArray(kvLeaderboard)) {
+        existingLeaderboard = kvLeaderboard;
+      } else {
+        throw new Error('Unable to retrieve existing leaderboard data');
+      }
+    }
     
     // Validate existing data
     if (!Array.isArray(existingLeaderboard)) {
@@ -110,6 +93,11 @@ async function refreshLeaderboard(shouldReset = false) {
         continue;
       }
       pointsMap.set(user.fid, { ...user });
+    }
+
+    // If no existing data, throw error
+    if (pointsMap.size === 0) {
+      throw new Error('No existing leaderboard data found');
     }
 
     // Fetch recent casts including replies
@@ -274,7 +262,7 @@ async function refreshLeaderboard(shouldReset = false) {
 
     return {
       success: true,
-      message: shouldReset ? "Storage reset and leaderboard refreshed" : "Leaderboard refreshed successfully",
+      message: "Leaderboard refreshed successfully",
       data: updatedLeaderboard,
       blobUrl: blobResult.url,
       timestamp,
@@ -315,7 +303,7 @@ export async function POST(request: NextRequest) {
     if (!isAuthorized(request)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    const result = await refreshLeaderboard(false);
+    const result = await refreshLeaderboard();
     return NextResponse.json(result);
   } catch (error) {
     return NextResponse.json(

@@ -145,14 +145,17 @@ export async function fetchLeaderboard(): Promise<User[]> {
     });
     
     if (!response.ok) {
-      throw new Error('Failed to fetch leaderboard');
+      throw new Error(`Failed to fetch leaderboard: ${response.status} ${response.statusText}`);
     }
     
     const { data } = await response.json();
+    if (!Array.isArray(data)) {
+      throw new Error('Invalid leaderboard data format received');
+    }
     return data;
   } catch (error) {
     console.error('Error in fetchLeaderboard:', error);
-    return [];
+    throw error; // Throw the error instead of returning empty array
   }
 }
 
