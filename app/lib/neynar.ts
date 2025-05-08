@@ -123,15 +123,19 @@ let lastUpdateTime: string | null = null;
 
 export async function fetchLeaderboard(): Promise<User[]> {
   try {
-    // Use relative URL in development, fallback to window.location.origin in production
-    const baseUrl = process.env.NODE_ENV === 'development' 
-      ? 'http://localhost:3000' 
-      : (process.env.NEXT_PUBLIC_HOST || (typeof window !== 'undefined' ? window.location.origin : ''));
-    
-    if (!baseUrl) {
-      throw new Error('Unable to determine base URL');
+    // Determine base URL based on environment
+    let baseUrl: string;
+    if (process.env.NODE_ENV === 'development') {
+      baseUrl = 'http://localhost:3000';
+    } else if (process.env.NEXT_PUBLIC_HOST) {
+      baseUrl = process.env.NEXT_PUBLIC_HOST;
+    } else if (typeof window !== 'undefined') {
+      baseUrl = window.location.origin;
+    } else {
+      // Server-side fallback
+      baseUrl = 'https://steventhelawnmoaner.vercel.app';
     }
-
+    
     const url = new URL('/api/leaderboard', baseUrl);
     // Add cache-busting parameter
     url.searchParams.set('t', Date.now().toString());
@@ -155,7 +159,7 @@ export async function fetchLeaderboard(): Promise<User[]> {
     return data;
   } catch (error) {
     console.error('Error in fetchLeaderboard:', error);
-    throw error; // Throw the error instead of returning empty array
+    throw error;
   }
 }
 
