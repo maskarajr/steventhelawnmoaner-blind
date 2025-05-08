@@ -76,8 +76,14 @@ async function refreshLeaderboard(shouldReset = false) {
       await resetStorage();
     }
 
-    // Initialize empty leaderboard
+    // Initialize points map with existing leaderboard data
     const pointsMap = new Map<number, User>();
+    const existingLeaderboard = await fetchLeaderboard();
+    
+    // Populate points map with existing data
+    for (const user of existingLeaderboard) {
+      pointsMap.set(user.fid, { ...user });
+    }
 
     // Fetch recent casts including replies
     const response = await api.get('/feed/user/casts', {

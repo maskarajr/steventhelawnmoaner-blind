@@ -142,7 +142,10 @@ export default function Home() {
           </div>
 
           <div className="flex justify-center">
-            <UserSearch onSearch={handleSearch} />
+            <UserSearch 
+              onSearch={handleSearch} 
+              allUsers={leaderboard.map(user => user.username)} 
+            />
           </div>
 
           {error && (
