@@ -7,33 +7,19 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   try {
-    // Get the last update time from the request header
-    const lastUpdateHeader = new URL(request.url).searchParams.get('lastUpdate');
-    
-    // Get current data and last update time from KV
-    const [kvData, lastUpdate] = await Promise.all([
-      kv.get<any[]>("leaderboard"),
-      kv.get<string>("lastUpdate")
-    ]);
+    // Try KV storage first
+    const kvData = await kv.get("leaderboard");
+    const lastUpdate = await kv.get("lastUpdate");
 
-    // If the client's last update matches server's, return 304 Not Modified
-    if (lastUpdateHeader && lastUpdate && lastUpdateHeader === lastUpdate) {
-      return new Response(null, { 
-        status: 304,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        }
-      });
-    }
-
-    if (kvData && kvData.length > 0) {
+    if (kvData && Array.isArray(kvData) && kvData.length > 0) {
       return NextResponse.json({
         data: kvData,
         lastUpdate
       }, {
         headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
           'Access-Control-Allow-Origin': '*',
           'Access-Control-Allow-Methods': 'GET, OPTIONS',
           'Access-Control-Allow-Headers': 'Content-Type, Authorization',
@@ -63,6 +49,9 @@ export async function GET(request: Request) {
             lastUpdate: blobLastUpdate
           }, {
             headers: {
+              'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+              'Pragma': 'no-cache',
+              'Expires': '0',
               'Access-Control-Allow-Origin': '*',
               'Access-Control-Allow-Methods': 'GET, OPTIONS',
               'Access-Control-Allow-Headers': 'Content-Type, Authorization',
@@ -80,6 +69,9 @@ export async function GET(request: Request) {
       lastUpdate: null
     }, {
       headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type, Authorization',
@@ -90,6 +82,9 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Failed to fetch leaderboard' }, { 
       status: 500,
       headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type, Authorization',

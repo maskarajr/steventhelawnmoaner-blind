@@ -133,28 +133,22 @@ export async function fetchLeaderboard(): Promise<User[]> {
     }
 
     const url = new URL('/api/leaderboard', baseUrl);
-    if (lastUpdateTime) {
-      url.searchParams.set('lastUpdate', lastUpdateTime);
-    }
+    // Add cache-busting parameter
+    url.searchParams.set('t', Date.now().toString());
 
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      cache: 'no-store',
+      headers: {
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
+      }
+    });
     
-    // If 304 Not Modified, return cached data
-    if (response.status === 304) {
-      const cached = leaderboardCache.get('leaderboard');
-      if (cached) return cached;
-    }
-
     if (!response.ok) {
       throw new Error('Failed to fetch leaderboard');
     }
     
-    const { data, lastUpdate } = await response.json();
-    if (lastUpdate) {
-      lastUpdateTime = lastUpdate;
-      leaderboardCache.set('leaderboard', data);
-    }
-    
+    const { data } = await response.json();
     return data;
   } catch (error) {
     console.error('Error in fetchLeaderboard:', error);
