@@ -5,6 +5,9 @@
 /.pnp
 .pnp.js
 
+#local test scripts
+/scripts
+
 # testing
 /coverage
 /app/api/redis-test/

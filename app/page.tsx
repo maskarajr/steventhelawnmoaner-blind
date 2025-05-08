@@ -64,8 +64,10 @@ export default function Home() {
       setLoading(true);
       setError(null);
       const users = await fetchLeaderboard();
+      // Sort users by points in descending order before assigning ranks
+      const sortedUsers = [...users].sort((a, b) => Number(b.points) - Number(a.points));
       setLeaderboard(
-        users.map((user, index) => ({
+        sortedUsers.map((user, index) => ({
           ...user,
           rank: index + 1
         }))

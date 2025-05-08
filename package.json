@@ -11,7 +11,8 @@
     "dev": "next dev",
     "build": "rimraf .next/cache && next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "push-leaderboard": "ts-node --project scripts/tsconfig.json scripts/push-leaderboard.ts"
   },
   "dependencies": {
     "@farcaster/frame-sdk": "^0.0.34",
@@ -83,7 +84,9 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
-    "rimraf": "^5.0.5"
+    "dotenv": "^16.5.0",
+    "rimraf": "^5.0.5",
+    "ts-node": "^10.9.2"
   },
   "resolutions": {
     "inflight": "^2.0.0",
