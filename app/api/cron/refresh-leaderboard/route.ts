@@ -68,6 +68,23 @@ async function resetStorage() {
   }
 }
 
+// Add these validation functions at the top
+function isValidUser(user: any): boolean {
+  return (
+    user &&
+    typeof user.fid === 'number' &&
+    typeof user.username === 'string' &&
+    typeof user.displayName === 'string' &&
+    typeof user.pfp === 'string' &&
+    typeof user.points === 'number' &&
+    !isNaN(user.points)
+  );
+}
+
+function isValidPoints(points: number): boolean {
+  return typeof points === 'number' && !isNaN(points) && isFinite(points);
+}
+
 async function refreshLeaderboard(shouldReset = false) {
   try {
     // Reset storage if requested
@@ -76,12 +93,22 @@ async function refreshLeaderboard(shouldReset = false) {
       await resetStorage();
     }
 
-    // Initialize points map with existing leaderboard data
-    const pointsMap = new Map<number, User>();
+    // Get existing leaderboard data
     const existingLeaderboard = await fetchLeaderboard();
     
-    // Populate points map with existing data
+    // Validate existing data
+    if (!Array.isArray(existingLeaderboard)) {
+      throw new Error('Invalid leaderboard data format');
+    }
+
+    const pointsMap = new Map<number, User>();
+    
+    // Populate points map with existing data and validate
     for (const user of existingLeaderboard) {
+      if (!isValidUser(user)) {
+        console.error('Invalid user data found:', user);
+        continue;
+      }
       pointsMap.set(user.fid, { ...user });
     }
 
@@ -97,6 +124,7 @@ async function refreshLeaderboard(shouldReset = false) {
     const casts = response.data.casts || [];
     const usersToFetch = new Set<number>();
     const pointsProcessed = [];
+    let hasChanges = false;
 
     // Process all point assignments from casts
     for (const cast of casts) {
@@ -106,6 +134,12 @@ async function refreshLeaderboard(shouldReset = false) {
       if (pointMatch) {
         const fid = cast.parent_author.fid;
         const points = parseFloat(pointMatch[1]);
+        
+        // Validate points
+        if (!isValidPoints(points)) {
+          console.error('Invalid points value found:', points, 'in cast:', cast.text);
+          continue;
+        }
         
         // Get or initialize user in points map
         let user = pointsMap.get(fid);
@@ -119,19 +153,50 @@ async function refreshLeaderboard(shouldReset = false) {
           };
           pointsMap.set(fid, user);
           usersToFetch.add(fid);
+          hasChanges = true;
         }
         
-        // Accumulate points
-        user.points += points;
+        // Only update points if this is a new cast
+        const castTimestamp = new Date(cast.timestamp).getTime();
+        const lastUpdate = new Date(await kv.get("lastUpdate") || 0).getTime();
         
-        pointsProcessed.push({
-          fid,
-          username: user.username || '',
-          points,
-          newTotal: user.points,
-          timestamp: cast.timestamp
-        });
+        if (castTimestamp > lastUpdate) {
+          // Validate new total points
+          const newTotal = user.points + points;
+          if (!isValidPoints(newTotal)) {
+            console.error('Invalid total points calculated:', newTotal, 'for user:', user.username);
+            continue;
+          }
+          
+          user.points = newTotal;
+          hasChanges = true;
+          
+          pointsProcessed.push({
+            fid,
+            username: user.username || '',
+            points,
+            newTotal: user.points,
+            timestamp: cast.timestamp
+          });
+        }
       }
+    }
+
+    // If no changes, return existing data
+    if (!hasChanges) {
+      return {
+        success: true,
+        message: "No new changes to process",
+        data: existingLeaderboard,
+        timestamp: await kv.get("lastUpdate"),
+        stats: {
+          totalUsers: existingLeaderboard.length,
+          newUsersProcessed: 0,
+          castsProcessed: casts.length,
+          pointsProcessed: 0,
+          pointsAssignments: []
+        }
+      };
     }
 
     // Add admin to fetch list if not in pointsMap
@@ -160,6 +225,12 @@ async function refreshLeaderboard(shouldReset = false) {
       for (const user of userResponse.data.users) {
         const existingUser = pointsMap.get(user.fid);
         if (existingUser) {
+          // Validate user data before updating
+          if (!user.username || !user.display_name || !user.pfp_url) {
+            console.error('Invalid user details received:', user);
+            continue;
+          }
+          
           pointsMap.set(user.fid, {
             ...existingUser,
             username: user.username,
@@ -180,7 +251,13 @@ async function refreshLeaderboard(shouldReset = false) {
 
     // Convert to array and sort by points
     const updatedLeaderboard = Array.from(pointsMap.values())
+      .filter(isValidUser) // Final validation before storage
       .sort((a, b) => b.points - a.points);
+
+    // Validate final data before storage
+    if (updatedLeaderboard.length === 0) {
+      throw new Error('No valid users in leaderboard after update');
+    }
 
     // Store in both KV and Blob
     const timestamp = new Date().toISOString();
