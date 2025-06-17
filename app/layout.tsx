@@ -1,6 +1,7 @@
 import './globals.css';
 import type { Metadata } from 'next';
 import localFont from 'next/font/local';
+import ClientLayout from './client-layout';
 
 const inter = localFont({
   src: [
@@ -50,7 +51,11 @@ export default function RootLayout({
         <meta property="og:title" content="Steven the Lawn Moaner" />
         <meta property="og:description" content="Check your Lawn Points balance and see who's leading the pack!" />
       </head>
-      <body>{children}</body>
+      <body>
+        <ClientLayout>
+          {children}
+        </ClientLayout>
+      </body>
     </html>
   );
 }

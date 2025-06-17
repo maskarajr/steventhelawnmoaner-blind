@@ -5,9 +5,10 @@ import axios from 'axios';
 import type { User } from '@/app/types';
 import { fetchLeaderboard } from '@/app/lib/neynar';
 import { REFRESH_INTERVAL } from '@/app/lib/constants';
+import { LeaderboardVault } from '@/app/lib/leaderboardVault';
 
-// Config for Edge Runtime
-export const runtime = "edge";
+// Config for Node.js Runtime
+export const runtime = "nodejs";
 
 const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY;
 const ADMIN_FID = process.env.NEXT_PUBLIC_ADMIN_FID || '262391';
@@ -68,7 +69,7 @@ async function refreshLeaderboard() {
     let existingLeaderboard: User[] = [];
     try {
       existingLeaderboard = await fetchLeaderboard();
-    } catch (error) {
+  } catch (error) {
       console.error('Error fetching existing leaderboard:', error);
       // If we can't fetch the existing leaderboard, try to get it from KV storage
       const kvLeaderboard = await kv.get("leaderboard");
@@ -158,25 +159,28 @@ async function refreshLeaderboard() {
           
           user.points = newTotal;
           hasChanges = true;
-          
-          pointsProcessed.push({
-            fid,
-            username: user.username || '',
-            points,
-            newTotal: user.points,
-            timestamp: cast.timestamp
-          });
-        }
+        
+        pointsProcessed.push({
+          fid,
+          username: user.username || '',
+          points,
+          newTotal: user.points,
+          timestamp: cast.timestamp
+        });
+      }
       }
     }
 
     // If no changes, return existing data
     if (!hasChanges) {
+      const timestamp = new Date().toISOString();
+      await kv.set("lastRefresh", timestamp);
       return {
         success: true,
         message: "No new changes to process",
         data: existingLeaderboard,
         timestamp: await kv.get("lastUpdate"),
+        lastRefresh: timestamp,
         stats: {
           totalUsers: existingLeaderboard.length,
           newUsersProcessed: 0,
@@ -202,7 +206,6 @@ async function refreshLeaderboard() {
 
     // Fetch user details for all users in the points map
     if (usersToFetch.size > 0) {
-      console.log('Fetching details for users:', usersToFetch.size);
       const userResponse = await api.get('/user/bulk', {
         params: {
           fids: Array.from(usersToFetch).join(',')
@@ -247,8 +250,23 @@ async function refreshLeaderboard() {
       throw new Error('No valid users in leaderboard after update');
     }
 
+    // Map User[] to LeaderboardEntry[] for SecretVaults
+    const leaderboardEntries = updatedLeaderboard.map(user => ({
+      _id: String(user.fid),
+      fid: { '%allot': String(user.fid) },
+      username: { '%allot': user.username || '' },
+      profileName: { '%allot': user.displayName || '' },
+      points: user.points,
+      rank: undefined,
+      displayName: user.displayName,
+      pfp: user.pfp,
+    }));
+
     // Store in both KV and Blob
     const timestamp = new Date().toISOString();
+    await kv.set("lastRefresh", timestamp);
+    await kv.set("leaderboard", updatedLeaderboard);
+    await kv.set("lastUpdate", timestamp);
     const [blobResult] = await Promise.all([
       put('leaderboard.json', JSON.stringify(updatedLeaderboard), { 
         access: 'public',
@@ -256,9 +274,9 @@ async function refreshLeaderboard() {
         token: process.env.BLOB_READ_WRITE_TOKEN!,
         allowOverwrite: true
       }),
-      kv.set("leaderboard", updatedLeaderboard),
-      kv.set("lastUpdate", timestamp)
+      LeaderboardVault.getInstance().storeLeaderboardData(leaderboardEntries)
     ]);
+    console.log('Leaderboard data written to SecretVaults');
 
     return {
       success: true,
@@ -285,7 +303,10 @@ export const revalidate = 0;
 
 export async function GET() {
   try {
-    const leaderboard = await fetchLeaderboard();
+    const leaderboard = await kv.get("leaderboard");
+    if (!Array.isArray(leaderboard)) {
+      return NextResponse.json([], { status: 200 });
+    }
     return NextResponse.json(leaderboard);
   } catch (error) {
     console.error('Error refreshing leaderboard:', error);
@@ -294,8 +315,8 @@ export async function GET() {
 }
 
 // Schedule the cron job to run every hour
-export const config = {
-  schedule: `*/${REFRESH_INTERVAL / (60 * 1000)} * * * *`,
+export const routeSegmentConfig = {
+  schedule: "0 * * * *", // every hour
 };
 
 export async function POST(request: NextRequest) {

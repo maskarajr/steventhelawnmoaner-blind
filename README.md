@@ -8,6 +8,7 @@ A Farcaster Frame app that brings a humorous twist to social interactions. Steve
 - 📊 User Activity Leaderboard
 - 🔍 User Search Functionality
 - 🎭 Playful UI/UX Design
+- 🔒 Secure Data Storage with Nillion SecretVault
 
 ## Tech Stack
 
@@ -16,6 +17,7 @@ A Farcaster Frame app that brings a humorous twist to social interactions. Steve
 - Tailwind CSS
 - Shadcn/ui Components
 - Neynar API for Farcaster Integration
+- Nillion SecretVault for secure data storage
 
 ## Getting Started
 
@@ -23,6 +25,8 @@ A Farcaster Frame app that brings a humorous twist to social interactions. Steve
 
 - Node.js 18+ installed
 - A Neynar API key (for Farcaster integration)
+- Nillion SecretVault access and credentials
+- Nillion Schema ID for leaderboard data
 
 ### Installation
 
@@ -40,6 +44,9 @@ npm install
 3. Create a `.env` file in the root directory and add your environment variables:
 ```env
 NEXT_PUBLIC_NEYNAR_API_KEY=your_neynar_api_key
+NILLION_SCHEMA_ID=your_schema_id
+NILLION_NODES=your_nodes_config
+NILLION_ORG_CREDENTIALS=your_org_credentials
 ```
 
 4. Run the development server:
@@ -48,6 +55,17 @@ npm run dev
 ```
 
 5. Open [http://localhost:3000](http://localhost:3000) in your browser to see the result.
+
+## SecretVault Integration
+
+The app uses Nillion SecretVault for secure storage of leaderboard data. The integration provides:
+
+- Secure storage of user points and activity data
+- Encrypted data access and retrieval
+- Public and private leaderboard views
+- Admin access control
+
+The SecretVault implementation can be found in `app/lib/leaderboardVault.ts`.
 
 ## Frame Validation
 
@@ -63,7 +81,3 @@ Feel free to contribute to this project by opening issues or submitting pull req
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Deployment
-
-The app is automatically deployed to Vercel on every push to the main branch. You can view the live version at: [steventhelawnmoaner.vercel.app](https://steventhelawnmoaner.vercel.app) 

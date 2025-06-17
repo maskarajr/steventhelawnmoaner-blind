@@ -1,77 +1,77 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import UserSearch from './components/UserSearch';
 import Leaderboard from './components/Leaderboard';
 import { Card } from "@/components/ui/card";
-import { fetchLeaderboard, fetchUserPointsFromBlob } from './lib/neynar';
-import type { User, LeaderboardEntry } from './types';
 import { toast } from "sonner";
 import Image from 'next/image';
 import stevenTheLawn from './assets/steventhelawn.jpeg';
 import { sdk } from '@farcaster/frame-sdk';
+import type { LeaderboardEntry } from './types';
+import { useAuth } from './lib/auth';
+import { UpdateTimer } from '@/app/components/UpdateTimer';
+
+// Helper to fetch leaderboard from SecretVaults API
+const fetchLeaderboard = async (): Promise<LeaderboardEntry[]> => {
+  const res = await fetch('/api/leaderboard');
+  const data = await res.json();
+  if (!Array.isArray(data)) throw new Error('Invalid leaderboard data format received');
+  return data;
+};
+
+// Get admin and dev FIDs from env (client-side safe)
+const ADMIN_FID = String(process.env.NEXT_PUBLIC_ADMIN_FID || '262391');
+const DEV_FID = String(process.env.NEXT_PUBLIC_DEV_FID || '192165');
+
+// Helper to get field value from string or { '%allot': string }
+function getFieldValue(value: string | { '%allot': string } | undefined): string | null {
+  if (!value) return null;
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object' && value !== null && '%allot' in value && typeof value['%allot'] === 'string') return value['%allot'];
+  return null;
+}
 
 export default function Home() {
+  const { token, fid, signIn } = useAuth();
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
-  const [searchResult, setSearchResult] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [fadeOut, setFadeOut] = useState(false);
+  const [lastUpdate, setLastUpdate] = useState<string | null>(null);
+  const [lastRefresh, setLastRefresh] = useState<string | null>(null);
+  const [apiMessage, setApiMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const initialize = async () => {
       try {
-        // Load leaderboard first
+        if (!fid || !token) {
+          await signIn();
+        }
         await loadLeaderboard();
-        
-        // Then initialize Farcaster SDK
         await sdk.actions.ready({ disableNativeGestures: true });
       } catch (error) {
         console.error('Failed to initialize:', error);
+        // If sign-in is rejected, still load the leaderboard (blurred)
+        await loadLeaderboard();
       }
     };
-
     initialize();
-  }, []);
-
-  // Clear search result after timeout
-  useEffect(() => {
-    let fadeTimer: NodeJS.Timeout;
-    let clearTimer: NodeJS.Timeout;
-
-    if (searchResult) {
-      // Start fade out after 27 seconds (giving 3 seconds for the fade animation)
-      fadeTimer = setTimeout(() => {
-        setFadeOut(true);
-      }, 27000);
-
-      // Clear the search result after 30 seconds
-      clearTimer = setTimeout(() => {
-        setSearchResult(null);
-        setFadeOut(false);
-      }, 30000);
-    }
-
-    // Cleanup timers
-    return () => {
-      clearTimeout(fadeTimer);
-      clearTimeout(clearTimer);
-    };
-  }, [searchResult]);
+  }, [signIn, fid, token]);
 
   async function loadLeaderboard() {
     try {
       setLoading(true);
       setError(null);
-      const users = await fetchLeaderboard();
-      // Sort users by points in descending order before assigning ranks
-      const sortedUsers = [...users].sort((a, b) => Number(b.points) - Number(a.points));
-      setLeaderboard(
-        sortedUsers.map((user, index) => ({
-          ...user,
-          rank: index + 1
-        }))
-      );
+      const res = await fetch('/api/leaderboard', {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+      const { leaderboard: data, message, lastUpdate, lastRefresh } = await res.json();
+      if (!Array.isArray(data)) throw new Error('Invalid leaderboard data format received');
+      // Sort and rank
+      const sorted = [...data].sort((a, b) => Number(b.points) - Number(a.points));
+      setLeaderboard(sorted.map((user, idx) => ({ ...user, rank: idx + 1 })));
+      setApiMessage(message || null);
+      setLastUpdate(lastUpdate || null);
+      setLastRefresh(lastRefresh || null);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to load leaderboard';
       setError(message);
@@ -81,42 +81,13 @@ export default function Home() {
     }
   }
 
-  const handleSearch = async (username: string) => {
-    setFadeOut(false);
-    try {
-      setError(null);
-      
-      // First check if user exists in current leaderboard state
-      const leaderboardUser = leaderboard.find(
-        user => user.username.toLowerCase() === username.toLowerCase()
-      );
+  // Find the signed-in user's leaderboard entry
+  const userEntry = fid
+    ? leaderboard.find(entry => String(getFieldValue(entry.fid)) === String(fid))
+    : null;
 
-      if (leaderboardUser) {
-        setSearchResult({
-          username: leaderboardUser.username,
-          points: leaderboardUser.points,
-          fid: leaderboardUser.fid,
-          displayName: leaderboardUser.displayName,
-          pfp: leaderboardUser.pfp
-        });
-        return;
-      }
-
-      // If not in current state, check blob storage
-      const points = await fetchUserPointsFromBlob(username);
-      setSearchResult({
-        username,
-        points,
-        fid: 0,
-        displayName: username,
-        pfp: `https://api.dicebear.com/7.x/avatars/svg?seed=${username}`
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to search user';
-      setError(message);
-      toast.error(message);
-    }
-  };
+  // Determine admin status
+  const isAdmin = String(fid) === ADMIN_FID || String(fid) === DEV_FID;
 
   return (
     <div className="min-h-screen bg-[#00011f]">
@@ -143,12 +114,44 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="flex justify-center">
-            <UserSearch 
-              onSearch={handleSearch} 
-              allUsers={leaderboard.map(user => user.username)} 
-            />
+          <div className="flex justify-center my-2">
+            <button
+              onClick={loadLeaderboard}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors font-semibold mb-4"
+              disabled={loading}
+            >
+              {loading ? 'Refreshing...' : '🔄 Refresh Leaderboard'}
+            </button>
           </div>
+          {!fid && (
+            <div className="text-center text-sm text-yellow-400 mb-4">
+              Not signed in. FID not detected.
+            </div>
+          )}
+          {userEntry && (
+            <div className="w-full max-w-2xl mx-auto mb-4">
+              <Card className="p-6 bg-[#0021f5] text-white">
+                <div className="flex items-center gap-4">
+                  {userEntry.pfp && (
+                    <img src={userEntry.pfp} alt="pfp" className="w-12 h-12 rounded-full" />
+                  )}
+                  <div className="flex flex-col min-w-0">
+                    <span className="font-bold text-white truncate">@{getFieldValue(userEntry.username)}</span>
+                    {getFieldValue(userEntry.profileName) && (
+                      <span className="text-gray-300 truncate">{getFieldValue(userEntry.profileName)}</span>
+                    )}
+                    <div className="text-xs text-gray-400">FID: {fid}</div>
+                  </div>
+                  <div className="ml-auto text-right">
+                    <div className="text-xl font-bold">
+                      {Number(Number(userEntry.points).toFixed(4)).toString()}
+                    </div>
+                    <div className="text-xs opacity-80">Lawn Points</div>
+                  </div>
+                </div>
+              </Card>
+            </div>
+          )}
 
           {error && (
             <Card className="p-4 bg-red-900/20 border-red-800 text-white">
@@ -156,28 +159,18 @@ export default function Home() {
             </Card>
           )}
 
-          {searchResult && !error && (
-            <Card className={`p-6 bg-[#0021f5] text-white transition-opacity duration-1000 ${fadeOut ? 'opacity-0' : 'opacity-100'}`}>
-              <h3 className="text-xl font-semibold mb-2">Search Result</h3>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">@{searchResult.username}</p>
-                  <p className="text-sm opacity-80">Farcaster User</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-2xl font-bold">
-                    {Number(Number(searchResult.points).toFixed(4)).toString()}
-                  </p>
-                  <p className="text-sm opacity-80">Lawn Points</p>
-                </div>
-              </div>
-            </Card>
+          {/* Only show the alert if not signed in */}
+          {!fid && apiMessage && (
+            <div className="text-center mb-2">
+              <div className="font-bold text-red-500 text-lg animate-pulse mb-1">🚨 Oops Intruder Alert 🚨</div>
+              <div className="text-yellow-400 font-semibold">{apiMessage}</div>
+            </div>
           )}
 
           {loading ? (
             <div className="text-center text-white">Loading leaderboard...</div>
           ) : (
-            <Leaderboard users={leaderboard} />
+            <Leaderboard users={leaderboard} isAdmin={isAdmin} signedInFid={fid ? String(fid) : undefined} />
           )}
         </div>
       </div>

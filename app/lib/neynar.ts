@@ -135,7 +135,7 @@ export async function fetchLeaderboard(): Promise<User[]> {
       // Server-side fallback
       baseUrl = 'https://steventhelawnmoaner.vercel.app';
     }
-    
+
     const url = new URL('/api/leaderboard', baseUrl);
     // Add cache-busting parameter
     url.searchParams.set('t', Date.now().toString());
@@ -147,7 +147,7 @@ export async function fetchLeaderboard(): Promise<User[]> {
         'Pragma': 'no-cache'
       }
     });
-    
+
     if (!response.ok) {
       throw new Error(`Failed to fetch leaderboard: ${response.status} ${response.statusText}`);
     }

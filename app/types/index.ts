@@ -6,6 +6,19 @@ export interface User {
   points: number;
 }
 
-export interface LeaderboardEntry extends User {
-  rank: number;
+export type EncryptedString = { '%allot': string; [key: string]: any };
+
+export interface LeaderboardEntry {
+  _id: string;
+  fid: string | EncryptedString;
+  username: string | EncryptedString;
+  profileName: string | EncryptedString;
+  points: number;
+  rank?: number;
+  displayName?: string;
+  pfp?: string;
+}
+
+export interface PublicLeaderboardEntry {
+  points: number;
 }
