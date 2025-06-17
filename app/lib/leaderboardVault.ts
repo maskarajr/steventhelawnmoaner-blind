@@ -50,7 +50,9 @@ export class LeaderboardVault {
     try {
       const data = await this.getAllLeaderboardData();
       if (!data) return null;
-      return data.find(entry => entry.fid['%allot'] === fid) || null;
+      return data.find(entry =>
+        typeof entry.fid === 'object' && entry.fid !== null && '%allot' in entry.fid && entry.fid['%allot'] === fid
+      ) || null;
     } catch (error) {
       console.error('Error getting user entry:', error);
       throw error;
@@ -63,7 +65,9 @@ export class LeaderboardVault {
       const data = await this.getAllLeaderboardData();
       if (!data) return false;
       // Check if the fid matches the admin FID
-      return data.some(entry => entry.fid['%allot'] === fid);
+      return data.some(entry =>
+        typeof entry.fid === 'object' && entry.fid !== null && '%allot' in entry.fid && entry.fid['%allot'] === fid
+      );
     } catch (error) {
       console.error('Error checking admin status:', error);
       throw error;
