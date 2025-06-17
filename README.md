@@ -32,8 +32,8 @@ A Farcaster Frame app that brings a humorous twist to social interactions. Steve
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/maskarajr/steventhelawnmoaner.git
-cd steventhelawnmoaner
+git clone https://github.com/maskarajr/steventhelawnmoaner-blind.git
+cd steventhelawnmoaner-blind
 ```
 
 2. Install dependencies:
