@@ -41,3 +41,7 @@ next-env.d.ts
 
 # cursor IDE
 .bolt/
+
+# local testing files
+gcloudflared.exe
+gcloudflared.ico

@@ -1,6 +1,7 @@
 "use client";
 
 import { Trophy } from "lucide-react";
+import Image from "next/image";
 import type { LeaderboardEntry } from '../types';
 
 function getFieldValue(value: string | { '%allot': string } | undefined) {
