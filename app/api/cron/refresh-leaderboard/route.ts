@@ -10,6 +10,10 @@ import { LeaderboardVault } from '@/app/lib/leaderboardVault';
 // Config for Node.js Runtime
 export const runtime = "nodejs";
 
+// Route configuration
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY;
 const ADMIN_FID = process.env.NEXT_PUBLIC_ADMIN_FID || '262391';
 const REFRESH_SECRET = process.env.REFRESH_SECRET;
@@ -298,9 +302,6 @@ async function refreshLeaderboard() {
   }
 }
 
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
-
 export async function GET() {
   try {
     const leaderboard = await kv.get("leaderboard");
@@ -313,11 +314,6 @@ export async function GET() {
     return NextResponse.json({ error: 'Failed to refresh leaderboard' }, { status: 500 });
   }
 }
-
-// Schedule the cron job to run every hour
-export const routeSegmentConfig = {
-  schedule: "0 * * * *", // every hour
-};
 
 export async function POST(request: NextRequest) {
   try {
