@@ -8,6 +8,8 @@ const SCHEMA_ID = process.env.NILLION_SCHEMA_ID;
 // Define the type for SecretVaultWrapper
 type SecretVaultWrapperType = any; // Temporary type until we have proper types
 
+console.log('orgConfig at runtime:', JSON.stringify(orgConfig, null, 2));
+
 export class LeaderboardVault {
   private collection: SecretVaultWrapperType;
   private initPromise: Promise<void>;
