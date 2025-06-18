@@ -1,17 +1,17 @@
 {
   "accountAssociation": {
-    "header": "eyJmaWQiOjE5MjE2NSwidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweDg5NTJEOGYyOWVkNjBkNDNkYkNlNUNlOEFFMjU4OWEzOTQ0OUQ3YmIifQ",
-    "payload": "eyJkb21haW4iOiJzdGV2ZW50aGVsYXdubW9hbmVyLnZlcmNlbC5hcHAifQ",
-    "signature": "MHg2MzVmMWI3ZTgzYzUwZmUxMzkxNDk0YjA3NTllY2QxZThmODA5ZGM2ZjUxYmQ2YTljMzRkMTVlMGIwOWNjMWNhMjY4YTU0MDEzNGQ5MDJjZTkyODk1ZDNhMGJhZjExYWQwMGI3NmZiMzZkNDViMTAxODdkMzI4MGNmZWQ3ZjVhYzFj"
+    "header": "",
+    "payload": "",
+    "signature": ""
   },
   "frame": {
     "version": "1",
     "name": "Steven the Lawn Moaner",
-    "iconUrl": "https://steventhelawnmoaner.vercel.app/icon.png",
-    "homeUrl": "https://steventhelawnmoaner.vercel.app",
-    "imageUrl": "https://steventhelawnmoaner.vercel.app/steventhelawn.jpeg",
+    "iconUrl": "https://steventhelawnmoaner-blind.vercel.app/icon.png",
+    "homeUrl": "https://steventhelawnmoaner-blind.vercel.app",
+    "imageUrl": "https://steventhelawnmoaner-blind.vercel.app/steventhelawn.jpeg",
     "buttonTitle": "Steven is Watching you all",
-    "splashImageUrl": "https://steventhelawnmoaner.vercel.app/icon.png",
+    "splashImageUrl": "https://steventhelawnmoaner-blind.vercel.app/icon.png",
     "splashBackgroundColor": "#00011f"
   }
 }
