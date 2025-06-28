@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "rm -rf .next/cache && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "push-leaderboard": "ts-node --project scripts/tsconfig.json scripts/push-leaderboard.ts"
