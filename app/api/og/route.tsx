@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="https://steventhelawnmoaner-blind.vercel.app/steventhelawn.jpeg"
+            src="https://steventhelawnmoaner-blind.up.railway.app/steventhelawn.jpeg"
             alt="Steven the Lawn Moaner"
             style={{
               width: '100%',

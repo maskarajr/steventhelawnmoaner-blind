@@ -7,11 +7,11 @@
   "frame": {
     "version": "1",
     "name": "Steven the Lawn Moaner",
-    "iconUrl": "https://steventhelawnmoaner-blind.vercel.app/icon.png",
-    "homeUrl": "https://steventhelawnmoaner-blind.vercel.app",
-    "imageUrl": "https://steventhelawnmoaner-blind.vercel.app/steventhelawn.jpeg",
+    "iconUrl": "https://steventhelawnmoaner-blind.up.railway.app/icon.png",
+    "homeUrl": "https://steventhelawnmoaner-blind.up.railway.app",
+    "imageUrl": "https://steventhelawnmoaner-blind.up.railway.app/steventhelawn.jpeg",
     "buttonTitle": "Steven is Watching you all",
-    "splashImageUrl": "https://steventhelawnmoaner-blind.vercel.app/icon.png",
+    "splashImageUrl": "https://steventhelawnmoaner-blind.up.railway.app/icon.png",
     "splashBackgroundColor": "#00011f"
   }
 }

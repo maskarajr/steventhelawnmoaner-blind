@@ -133,7 +133,7 @@ export async function fetchLeaderboard(): Promise<User[]> {
       baseUrl = window.location.origin;
     } else {
       // Server-side fallback
-      baseUrl = 'https://steventhelawnmoaner-blind.vercel.app';
+      baseUrl = 'https://steventhelawnmoaner-blind.up.railway.app';
     }
 
     const url = new URL('/api/leaderboard', baseUrl);
